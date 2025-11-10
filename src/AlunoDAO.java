@@ -12,16 +12,15 @@ public class AlunoDAO {
 
     // CREATE - Cadastrar aluno (AGORA COM ID AUTOMÁTICO)
     public Integer cadastrar(Aluno aluno) {
-        String sql = "INSERT INTO Aluno (id_aluno, id_responsavel, nome, idade, cpf, necessidade_especial) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO Aluno (id_responsavel, nome, idade, cpf, necessidade_especial) VALUES (?, ?, ?, ?, ?)";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            stmt.setInt(1, aluno.getId());
-           stmt.setInt(2, aluno.getResponsavel().getId()); // ID do responsável já deve existir!
-           stmt.setString(3,aluno.nome);
-           stmt.setInt(4, aluno.getIdade());
-           stmt.setString(5,aluno.getCpf());
-           stmt.setString(6, aluno.getNecessidadeEspecial());
+           stmt.setInt(1, aluno.getResponsavel().getId()); // ID do responsável já deve existir!
+           stmt.setString(2,aluno.nome);
+           stmt.setInt(3, aluno.getIdade());
+           stmt.setString(4,aluno.getCpf());
+           stmt.setString(5, aluno.getNecessidadeEspecial());
 
             int linhasAfetadas = stmt.executeUpdate();
 

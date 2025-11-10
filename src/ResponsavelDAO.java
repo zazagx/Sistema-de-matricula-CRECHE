@@ -12,17 +12,16 @@ public class ResponsavelDAO {
 
     // CREATE - Cadastrar responsável
     public Integer cadastrar(Responsavel responsavel) {
-        String sql = "INSERT INTO Responsavel (id_responsavel, nome, idade, cpf, telefone, parentesco) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO Responsavel (nome, idade, cpf, telefone, parentesco) VALUES (?, ?, ?, ?, ?)";
 
         // Usando RETURN_GENERATED_KEYS para pegar o ID auto-incrementado
         try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            stmt.setInt(1,responsavel.getId());
-            stmt.setString(2,responsavel.getNome());
-            stmt.setInt(3,responsavel.getIdade());
-            stmt.setString(4,responsavel.getCpf());
-            stmt.setString(5,responsavel.getTelefone());
-            stmt.setString(6,responsavel.getParentesco());
+            stmt.setString(1,responsavel.getNome());
+            stmt.setInt(2,responsavel.getIdade());
+            stmt.setString(3,responsavel.getCpf());
+            stmt.setString(4,responsavel.getTelefone());
+            stmt.setString(5,responsavel.getParentesco());
 
             int linhasAfetadas = stmt.executeUpdate();
 
