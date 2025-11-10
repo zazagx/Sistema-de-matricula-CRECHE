@@ -205,12 +205,17 @@ abstract class Turma {
     protected List<Aluno> alunos;
     protected Professor professor;
 
-    public Turma(int id, String nome, String faixaEtaria, String turno) {
+    public Turma(int id, String nome, String faixaEtaria, String turno, Professor professor) {
         this.id = id;
         this.nome = nome;
         this.faixaEtaria = faixaEtaria;
         this.turno = turno;
         this.alunos = new ArrayList<>();
+        this.professor = professor;
+    }
+
+    public Turma() {
+
     }
 
     // Método para adicionar aluno verificando a idade
@@ -235,6 +240,9 @@ abstract class Turma {
     public Professor getProfessor() { return professor; }
 
     public void setNome(String nome) { this.nome = nome; }
+
+    public void setId(int id) { this.id = id; }
+
     public void setTurno(String turno) { this.turno = turno; }
     public void setProfessor(Professor professor) { this.professor = professor; }
 
@@ -250,8 +258,8 @@ abstract class Turma {
 class TurmaCreche extends Turma {
     private String horaCochilo;
 
-    public TurmaCreche(int id, String nome, String turno, String horaCochilo) {
-        super(id, nome, "2-3 anos", turno);
+    public TurmaCreche(int id, String nome,String faixaEtaria, String turno, String horaCochilo, Professor professor) {
+        super(id, nome, "2-3 anos", turno, professor);
         this.horaCochilo = horaCochilo;
     }
 
@@ -274,8 +282,8 @@ class TurmaCreche extends Turma {
 class TurmaInfantil extends Turma {
     private String aulasPsicomotricidade;
 
-    public TurmaInfantil(int id, String nome, String turno, String aulasPsicomotricidade) {
-        super(id, nome, "4-5 anos", turno);
+    public TurmaInfantil(int id, String nome, String faixaEtaria,String turno, String aulasPsicomotricidade, Professor professor) {
+        super(id, nome, "4-5 anos", turno, professor );
         this.aulasPsicomotricidade = aulasPsicomotricidade;
     }
 
@@ -298,8 +306,8 @@ class TurmaInfantil extends Turma {
 class TurmaPre extends Turma {
     private String aulasAlfabetizacao;
 
-    public TurmaPre(int id, String nome, String turno, String aulasAlfabetizacao) {
-        super(id, nome, "6 anos", turno);
+    public TurmaPre(int id, String nome, String faixaEtaria,String turno, String aulasAlfabetizacao, Professor professor) {
+        super(id, nome, "6 anos", turno, professor);
         this.aulasAlfabetizacao = aulasAlfabetizacao;
     }
 
@@ -357,6 +365,10 @@ class Matricula {
         this.preMatricula = preMatricula;
     }
 
+    public Matricula() {
+
+    }
+
 
     // Getters e Setters
     public int getNumeroMatricula() { return numeroMatricula; }
@@ -390,6 +402,18 @@ class Matricula {
                 ", Aluno: " + aluno.getNome() + ", Turma: " + (turma != null ? turma.getNome() : "Não atribuída") +
                 ", Responsáveis: " + responsaveis.size() + ", Funcionário: " + (funcionario != null ? funcionario.getNome() : "Não definido");
     }
+
+    public void setNumeroMatricula(int idGerado) {
+    }
+
+    public void setData(LocalDate dataMatricula) {
+    }
+
+    public void setAluno(Aluno aluno) {
+    }
+
+    public void setResponsaveis(List<Responsavel> responsaveis) {
+    }
 }
 
 // Classe principal Aplicativo
@@ -409,7 +433,7 @@ public class Aplicativo {
     private static int nextMatriculaId = 1;
     private static int nextTurmaId = 1;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SQLException {
         // Cadastro inicial de dados conforme solicitado
 
         String comando;
@@ -417,7 +441,7 @@ public class Aplicativo {
             System.out.println("\n=== SISTEMA DE GERENCIAMENTO DE MATRÍCULAS ===");
             System.out.println("Comandos disponíveis:");
             System.out.println("cadastrar aluno, cadastrar funcionario, cadastrar responsavel");
-            System.out.println("cadastrar pré-matrícula, converter matrícula, cadastrar matricula");
+            System.out.println("cadastrar pre matricula, converter matricula, cadastrar matricula");
             System.out.println("adicionar irmãos, cadastrar turma");
             System.out.println("exibir alunos, exibir funcionarios, exibir responsaveis");
             System.out.println("exibir matriculas, exibir irmãos, exibir turmas, exibir pré-matriculados");
@@ -436,10 +460,10 @@ public class Aplicativo {
                 case "cadastrar responsavel":
                     cadastrarResponsavel();
                     break;
-                case "cadastrar pré-matrícula":
+                case "cadastrar pre matricula":
                     cadastrarPreMatricula();
                     break;
-                case "converter matrícula":
+                case "converter matricula":
                     converterMatricula();
                     break;
                 case "cadastrar matricula":
@@ -518,9 +542,7 @@ public class Aplicativo {
         }catch (Exception e){
             throw new RuntimeException(e);
         }
-        //for (int i = 0; i < responsaveis.size(); i++) {
-        //    System.out.println((i + 1) + ". " + responsaveis.get(i).getNome());
-       // }
+
 
         System.out.print("Selecione o número do responsável: ");
         int respIndex = Integer.parseInt(scanner.nextLine()) - 1;
@@ -536,12 +558,12 @@ public class Aplicativo {
         try(Connection conn = connectionFactory.recuperarConexao()) {
             AlunoDAO alunoDAO = new AlunoDAO(conn);
             alunoDAO.cadastrar(aluno);
+            System.out.println("Aluno cadastrado com sucesso! ID: " + aluno.getId());
 
         }catch (Exception e){
             System.out.println("Erro ao cadastrar o aluno: "+ e.getMessage());
         }
 
-        System.out.println("Aluno cadastrado com sucesso! ID: " + aluno.getId());
     }
 // TESTANDO CADASTRO COMPLETO...
 
@@ -672,62 +694,95 @@ public class Aplicativo {
         String turno = scanner.nextLine();
 
         Turma turma = null;
-
-        switch (tipo) {
-            case 1: // Creche
-                System.out.print("Hora do cochilo: ");
-                String horaCochilo = scanner.nextLine();
-                turma = new TurmaCreche(nextTurmaId++, nome, turno, horaCochilo);
-                break;
-            case 2: // Infantil
-                System.out.print("Aulas de psicomotricidade: ");
-                String aulasPsicomotricidade = scanner.nextLine();
-                turma = new TurmaInfantil(nextTurmaId++, nome, turno, aulasPsicomotricidade);
-                break;
-            case 3: // Pré
-                System.out.print("Aulas de alfabetização: ");
-                String aulasAlfabetizacao = scanner.nextLine();
-                turma = new TurmaPre(nextTurmaId++, nome, turno, aulasAlfabetizacao);
-                break;
-            default:
-                System.out.println("Tipo inválido!");
-                return;
-        }
-
         // Listar professores para seleção
-        System.out.println("Professores disponíveis:");
-        List<Professor> professores = new ArrayList<>();
-        for (Funcionario f : funcionarios) {
-            if (f instanceof Professor) {
-                professores.add((Professor) f);
-                System.out.println(professores.size() + ". " + f.getNome());
+
+        try{
+            Connection connection = new ConnectionFactory().recuperarConexao();
+            FuncionarioDAO funcionarioDAO = new FuncionarioDAO(connection);
+            List<Funcionario> professores = funcionarioDAO.listarPorCargo("Professor");
+            if (professores.isEmpty()) {
+                System.out.println("Nenhum professor encontrado.");
+            } else {
+
+                System.out.println("Professores disponíveis:");
+                for (Funcionario prof : professores){
+                    System.out.println(prof.getId() + ". " + prof.getNome());
+
+                }
+                System.out.print("Selecione o número do professor: ");
+                int profIndex = Integer.parseInt(scanner.nextLine());
+
+
+                Funcionario professor = funcionarioDAO.buscarPorId(profIndex);
+                turma.setProfessor((Professor) professor);
+                switch (tipo) {
+                    case 1: // Creche
+                        System.out.print("Hora do cochilo: ");
+                        String horaCochilo = scanner.nextLine();
+                        turma = new TurmaCreche(nextTurmaId++, nome, "2-3",turno, horaCochilo, (Professor) professor);
+                        break;
+                    case 2: // Infantil
+                        System.out.print("Aulas de psicomotricidade: ");
+                        String aulasPsicomotricidade = scanner.nextLine();
+                        turma = new TurmaInfantil(nextTurmaId++, nome,"4-5 anos", turno, aulasPsicomotricidade, (Professor) professor);
+                        break;
+                    case 3: // Pré
+                        System.out.print("Aulas de alfabetização: ");
+                        String aulasAlfabetizacao = scanner.nextLine();
+                        turma = new TurmaPre(nextTurmaId++, nome, "6 anos",turno, aulasAlfabetizacao, (Professor) professor);
+                        break;
+                    default:
+                        System.out.println("Tipo inválido!");
+                        return;
+                }
+
+                //if (profIndex < 0 || profIndex > professores.size()) {
+                //  System.out.println("Índice de professor inválido!");
+                //  return;
+                // }
+
             }
+
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Erro ao enumerar professores para a turma: ",e);
         }
 
-        if (professores.isEmpty()) {
-            System.out.println("Nenhum professor cadastrado!");
-        } else {
-            System.out.print("Selecione o número do professor: ");
-            int profIndex = Integer.parseInt(scanner.nextLine()) - 1;
 
-            if (profIndex >= 0 && profIndex < professores.size()) {
-                turma.setProfessor(professores.get(profIndex));
-            }
+
+
+
+        try{
+            Connection connection = new ConnectionFactory().recuperarConexao();
+            TurmaDAO turmaDAO = new TurmaDAO(connection);
+            turmaDAO.cadastrar(turma);
+        }catch (RuntimeException e){
+            throw new RuntimeException("Erro ao cadastrar a turma ao banco de dados: ",e);
         }
-
-        turmas.add(turma);
-        System.out.println("Turma cadastrada com sucesso! ID: " + turma.getId());
+        System.out.println("Turma cadastrada com sucesso! ID: "+ turma.getId());
     }
 
     private static void cadastrarMatricula() {
         System.out.println("\n--- Cadastro de Matrícula ---");
 
         // Listar alunos para seleção
-        System.out.println("Alunos disponíveis:");
-        for (int i = 0; i < alunos.size(); i++) {
-            System.out.println((i + 1) + ". " + alunos.get(i).getNome());
-        }
+        try{
+            var connection = new ConnectionFactory().recuperarConexao();
+            AlunoDAO alunoDAO = new AlunoDAO(connection);
+            alunos = alunoDAO.listarTodos();
 
+            if (alunos.isEmpty()) {
+                System.out.println("Nenhum aluno encontrado.");
+            } else {
+                System.out.println("Alunos disponíveis:");
+                for (int i = 0; i < alunos.size(); i++){
+                    System.out.println((i + 1) + ". " + alunos.get(i).getNome());
+
+                }
+            }
+
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
         System.out.print("Selecione o número do aluno: ");
         int alunoIndex = Integer.parseInt(scanner.nextLine()) - 1;
 
@@ -736,63 +791,100 @@ public class Aplicativo {
             return;
         }
 
-
         Aluno aluno = alunos.get(alunoIndex);
+
 
         // Listar responsáveis para seleção (múltiplos)
         System.out.println("Responsáveis disponíveis (selecione múltiplos separados por vírgula):");
-        for (int i = 0; i < responsaveis.size(); i++) {
-            System.out.println((i + 1) + ". " + responsaveis.get(i).getNome());
+        try{
+            var connection = new ConnectionFactory().recuperarConexao();
+            ResponsavelDAO responsavelDAO = new ResponsavelDAO(connection);
+            responsaveis = responsavelDAO.listarTodos();
+
+            if (responsaveis.isEmpty()) {
+                System.out.println("Nenhum responsável encontrado.");
+            } else {
+                System.out.println("Lista de responsáveis:");
+                for (int i = 0; i < responsaveis.size(); i++){
+                    System.out.println((i + 1) + ". " + responsaveis.get(i).getNome());
+                }
+            }
+
+        }catch (Exception e){
+            throw new RuntimeException(e);
         }
+
 
         System.out.print("Selecione os números dos responsáveis: ");
         String[] respIndicesStr = scanner.nextLine().split(",");
         List<Responsavel> responsaveisMatricula = new ArrayList<>();
 
-        for (String indexStr : respIndicesStr) {
-            int respIndex = Integer.parseInt(indexStr.trim()) - 1;
-            if (respIndex >= 0 && respIndex < responsaveis.size()) {
-                responsaveisMatricula.add(responsaveis.get(respIndex));
-            }
-        }
 
+        for (String indexStr : respIndicesStr) {
+            int index = Integer.parseInt(indexStr.trim()) - 1;
+            if (index >= 0 && index < responsaveis.size()) {
+                responsaveisMatricula.add(responsaveis.get(index));
+                System.out.println(responsaveisMatricula);
+
+
+            }
+
+        }
         if (responsaveisMatricula.isEmpty()) {
             System.out.println("Nenhum responsável válido selecionado!");
             return;
         }
 
+
         // Listar funcionários para seleção
         System.out.println("Funcionários disponíveis:");
-        for (int i = 0; i < funcionarios.size(); i++) {
-            System.out.println((i + 1) + ". " + funcionarios.get(i).getNome());
+        Funcionario funcionario;
+        try{
+            Connection connection = new ConnectionFactory().recuperarConexao();
+            FuncionarioDAO funcionarioDAO = new FuncionarioDAO(connection);
+            funcionarios = funcionarioDAO.listarTodos(); for (int i = 0; i < funcionarios.size(); i++) {
+                System.out.println((i + 1) + ". " + funcionarios.get(i).getNome());
+            }
+
+            System.out.print("Selecione o número do funcionário: ");
+            int funcIndex = Integer.parseInt(scanner.nextLine()) - 1;
+
+            if (funcIndex < 0 || funcIndex >= funcionarios.size()) {
+                System.out.println("Índice de funcionário inválido!");
+                return;
+            }
+             funcionario = funcionarios.get(funcIndex);
+
+        } catch (RuntimeException e) {
+            throw new RuntimeException(e);
         }
 
-        System.out.print("Selecione o número do funcionário: ");
-        int funcIndex = Integer.parseInt(scanner.nextLine()) - 1;
 
-        if (funcIndex < 0 || funcIndex >= funcionarios.size()) {
-            System.out.println("Índice de funcionário inválido!");
-            return;
-        }
 
-        Funcionario funcionario = funcionarios.get(funcIndex);
 
         // Listar turmas para seleção
 
         System.out.println("Turmas disponíveis:");
-        for (int i = 0; i < turmas.size(); i++) {
-            System.out.println((i + 1) + ". " + turmas.get(i).getNome());
+        Turma turma;
+        try{
+            Connection connection = new ConnectionFactory().recuperarConexao();
+            TurmaDAO turmaDAO = new TurmaDAO(connection);
+            turmas = turmaDAO.listarTodos(); for (int i = 0; i < turmas.size(); i++) {
+                System.out.println((i + 1) + ". " + turmas.get(i).getNome());
+            }
+
+            System.out.print("Selecione o número da turma: ");
+            int turmaIndex = Integer.parseInt(scanner.nextLine()) - 1;
+
+            if (turmaIndex < 0 || turmaIndex >= turmas.size()) {
+                System.out.println("Índice de turma inválido!");
+                return;
+            }
+            turma = turmas.get(turmaIndex);
+
+        } catch (RuntimeException e) {
+            throw new RuntimeException(e);
         }
-
-        System.out.print("Selecione o número da turma: ");
-        int turmaIndex = Integer.parseInt(scanner.nextLine()) - 1;
-
-        if (turmaIndex < 0 || turmaIndex >= turmas.size()) {
-            System.out.println("Índice de turma inválido!");
-            return;
-        }
-
-        Turma turma = turmas.get(turmaIndex);
 
         // Verificar se a idade do aluno é compatível com a turma
         if (!turma.verificarIdadeAluno(aluno.getIdade())) {
@@ -825,8 +917,14 @@ public class Aplicativo {
         Matricula matricula = new Matricula(nextMatriculaId++, LocalDate.now(), situacao,
                 observacoes, endereco, aluno,
                 responsaveisMatricula, funcionario, turma, false);
-
-        matriculas.add(matricula);
+        try{
+            Connection connection = new ConnectionFactory().recuperarConexao();
+            MatriculaDAO matriculaDAO = new MatriculaDAO(connection);
+            matriculaDAO.cadastrar(matricula);
+        } catch (RuntimeException e) {
+            throw new RuntimeException("erro ao cadastrar a matricula ao banco de dados",e);
+        }
+        //matriculas.add(matricula);
 
         // Adicionar aluno à turma
         if (turma.adicionarAluno(aluno)) {
@@ -870,40 +968,64 @@ public class Aplicativo {
     }
 
     private static void cadastrarPreMatricula(){
+        Aluno aluno;
+        List<Responsavel> respSelecionados;
+
         System.out.println("\n--- Cadastro de PRÉ-MATRÍCULA ---");
 
         System.out.println("Alunos disponíveis: ");
-        for (int i = 0; i < alunos.size(); i++){
-            System.out.println((i+1)+ ". "+ alunos.get(i).getNome());
-        }
-        System.out.println("Selecione o número do aluno: ");
-        int alunoIndex = Integer.parseInt(scanner.nextLine())-1;
+        try{
+            Connection connection = new ConnectionFactory().recuperarConexao();
+            AlunoDAO alunoDAO = new AlunoDAO(connection);
+            alunos = alunoDAO.listarTodos();
 
-        if (alunoIndex < 0 || alunoIndex >= alunos.size()){
-            System.out.println("Índice inválido!");
-            return;
+            for (Aluno al : alunos){
+                System.out.println(al.getId() +". " + al.getNome());
+            }
+            System.out.println("Selecione o número do aluno: ");
+            int alunoIndex = Integer.parseInt(scanner.nextLine());
+            alunoDAO.buscarPorId(alunoIndex);
+
+            if (alunoIndex < 0 ){
+                System.out.println("Índice inválido!");
+                return;
+            }
+            aluno = alunoDAO.buscarPorId(alunoIndex);
+
+        } catch (RuntimeException e) {
+            throw new RuntimeException(e);
         }
-        Aluno aluno = alunos.get(alunoIndex);
+
+
 
         // Responsaveis (Multiplos)
         System.out.println("Selecione os responsáveis (separe por vírgula): ");
-        for (int i =0; i < responsaveis.size(); i++){
-            System.out.println((i+1)+". "+ responsaveis.get(i).getNome());
-        }
-        String[] respIndices = scanner.nextLine().split(",");
-        List<Responsavel> respSelecionados = new ArrayList<>();
-
-        for (String indexStr : respIndices){
-            int idx = Integer.parseInt(indexStr.trim()) - 1;
-            if(idx >= 0 && idx < responsaveis.size()){
-                respSelecionados.add(responsaveis.get(idx));
+        try{
+            Connection connection = new ConnectionFactory().recuperarConexao();
+            ResponsavelDAO responsavelDAO = new ResponsavelDAO(connection);
+            responsaveis = responsavelDAO.listarTodos();
+            for (Responsavel r : responsaveis){
+                System.out.println(r.getId()+". " + r.getNome());
             }
+
+            String[] respIndices = scanner.nextLine().split(",");
+            respSelecionados = new ArrayList<>();
+
+            for (String indexStr : respIndices){
+                int idx = Integer.parseInt(indexStr.trim()) ;
+                if(idx >= 0){
+                    respSelecionados.add(responsavelDAO.buscarPorId(idx));
+                }
+            }
+
+            if (respSelecionados.isEmpty()){
+                System.out.println("Nenhum responsável selecionado!");
+                return;
+            }
+        } catch (RuntimeException e) {
+            throw new RuntimeException(e);
         }
 
-        if (respSelecionados.isEmpty()){
-            System.out.println("Nenhum responsável selecionado!");
-            return;
-        }
         System.out.println("Observações (motivo da pré-matricula, etc): ");
         String observacoes = scanner.nextLine();
 
@@ -913,11 +1035,19 @@ public class Aplicativo {
         Matricula preMatricula = new Matricula(nextMatriculaId++, LocalDate.now(), SituacaoMatricula.PENDENTE,
                 observacoes, endereco, aluno, respSelecionados, null, null, true);
 
-        matriculas.add(preMatricula);
-        List<Matricula> preMatriculados = new ArrayList<>();
-        preMatriculados.add(preMatricula);
+        try{
+            Connection connection = new ConnectionFactory().recuperarConexao();
+            MatriculaDAO matriculaDAO = new MatriculaDAO(connection);
+            matriculaDAO.cadastrar(preMatricula);
+            System.out.println("Pré-matrícula registrada com sucesso! Número: " + preMatricula.getNumeroMatricula());
+        } catch (RuntimeException e) {
+            throw new RuntimeException(e);
+        }
+        //matriculas.add(preMatricula);
+        //List<Matricula> preMatriculados = new ArrayList<>();
+        //preMatriculados.add(preMatricula);
 
-        System.out.println("Pré-matrícula registrada com sucesso! Número: " + preMatricula.getNumeroMatricula());
+
     }
 
     private static void exibir(String tipoPessoa){
@@ -1039,6 +1169,11 @@ public class Aplicativo {
 
     private static void exibirTurmas() {
         System.out.println("\n--- Lista de Turmas ---");
+
+        Connection connection = new ConnectionFactory().recuperarConexao();
+        TurmaDAO turmaDAO = new TurmaDAO(connection);
+        turmas = turmaDAO.listarTodos();
+
         if (turmas.isEmpty()) {
             System.out.println("Nenhuma turma cadastrada.");
         } else {
@@ -1051,6 +1186,7 @@ public class Aplicativo {
                 System.out.println();
             }
         }
+
     }
     private static void exibirPreMatriculas() {
         System.out.println("\n--- Lista de Pré-Matrículas ---");
@@ -1089,60 +1225,90 @@ public class Aplicativo {
 
 
 
-    private static void converterMatricula(){
+    private static void converterMatricula() throws SQLException {
         System.out.println("\n --- Converter PRÉ-MATRÍCULA em matrícula deinitiva ---");
+        Matricula pre;
+        Funcionario func;
+        Turma turma;
         //Filtro de Pre-matriculas pendentes...
         List<Matricula> pendentes = new ArrayList<>();
-        for (Matricula m : matriculas){
-            if (m.isPreMatricula() && m.getSituacao() == SituacaoMatricula.PENDENTE){
-                pendentes.add(m);
+        try{
+            Connection connection = new ConnectionFactory().recuperarConexao();
+            MatriculaDAO matriculaDAO = new MatriculaDAO(connection);
+            matriculas = matriculaDAO.listarTodos();
+            for (Matricula m : matriculas){
+                if (m.isPreMatricula() && m.getSituacao() == SituacaoMatricula.PENDENTE){
+                    pendentes.add(m);
+                }
             }
+
+            if (pendentes.isEmpty()){
+                System.out.println("Nenhuma pré-matrícula pendente encontrada.");
+                return;
+            }
+
+            //Exiba as pre matriculas disponiveis :)
+            System.out.println("Pré-matrículas disponíveis: ");
+            for (Matricula matPendente : pendentes) {
+                System.out.println(matPendente.getNumeroMatricula() + ". " + matPendente.getAluno().getNome());
+            }
+
+            System.out.println("Selecione o número da pré-matrícula: ");
+            int index = Integer.parseInt(scanner.nextLine());
+
+            if (index < 0 ){
+                System.out.println("Índice inválido!");
+                return;
+            }
+            pre = matriculaDAO.buscarPorId(index);
+
+        } catch (RuntimeException e) {
+            throw new RuntimeException(e);
         }
 
-        if (pendentes.isEmpty()){
-            System.out.println("Nenhuma pré-matrícula pendente encontrada.");
-            return;
-        }
-
-        //Exiba as pre matriculas disponiveis :)
-        System.out.println("Pré-matrículas disponíveis: ");
-        for (int i = 0; i < pendentes.size(); i++) {
-            System.out.println((i + 1)+ ". "+ pendentes.get(i));
-        }
-
-        System.out.println("Selecione o número da pré-matrícula: ");
-        int index = Integer.parseInt(scanner.nextLine()) - 1;
-
-        if (index < 0 || index >= pendentes.size()){
-            System.out.println("Índice inválido!");
-            return;
-        }
-        Matricula pre = pendentes.get(index);
 
         //selecionar funcionario responsaveel
+        try{
+            Connection connection = new ConnectionFactory().recuperarConexao();
+            FuncionarioDAO funcionarioDAO = new FuncionarioDAO(connection);
+            List<Funcionario> cuidadores = funcionarioDAO.listarPorCargo("Cuidador");
 
-        System.out.println("Funcionários disponíveis: ");
-        for (int i = 0; i < funcionarios.size(); i++){
-            System.out.println((i + 1)+ ". " + funcionarios.get(i).getNome());
+            System.out.println("Funcionários disponíveis: ");
+            for (Funcionario cuid : cuidadores){
+                System.out.println(cuid.getId()+ ". "+ cuid.getNome());
+            }
+            System.out.println("Selecionar o número do funcionário: ");
+            int funcIndex = Integer.parseInt(scanner.nextLine());
+            if (funcIndex < 0){
+                System.out.println("Índice inválido!");
+            }
+            func = funcionarioDAO.buscarPorId(funcIndex);
+
+        } catch (RuntimeException e) {
+            throw new RuntimeException(e);
         }
-        System.out.println("Selecionar o número do funcionário: ");
-        int funcIndex = Integer.parseInt(scanner.nextLine()) - 1;
-        if (funcIndex < 0 || funcIndex >= funcionarios.size()){
-            System.out.println("Índice inválido!");
-        }
-        Funcionario func = funcionarios.get(funcIndex);
+
+
+       try{
+           Connection connection = new ConnectionFactory().recuperarConexao();
+           TurmaDAO turmaDAO = new TurmaDAO(connection);
+           turmas = turmaDAO.listarTodos();
+           for (Turma tur : turmas){
+               System.out.println(tur.getId()+". "+ tur.getNome());
+           }
+           System.out.print("Selecione o número da turma: ");
+           int turmaIndex = Integer.parseInt(scanner.nextLine());
+           if (turmaIndex < 0) {
+               System.out.println("Índice inválido!");
+               return;
+           }
+           turma = turmaDAO.buscarPorId(turmaIndex);
+       } catch (RuntimeException e) {
+           throw new RuntimeException(e);
+       }
         // Selelecionar Turma
-        System.out.println("Turmas disponíveis:");
-        for (int i = 0; i < turmas.size(); i++) {
-            System.out.println((i + 1) + ". " + turmas.get(i).getNome());
-        }
-        System.out.print("Selecione o número da turma: ");
-        int turmaIndex = Integer.parseInt(scanner.nextLine()) - 1;
-        if (turmaIndex < 0 || turmaIndex >= turmas.size()) {
-            System.out.println("Índice inválido!");
-            return;
-        }
-        Turma turma = turmas.get(turmaIndex);
+
+
 
         //Atualizacao (de fato)
 
@@ -1152,8 +1318,15 @@ public class Aplicativo {
         pre.setTurma(turma);
         turma.adicionarAluno(pre.getAluno());
 
+// Atualiza no banco
+        try (Connection connection = new ConnectionFactory().recuperarConexao()) {
+            MatriculaDAO matriculaDAO = new MatriculaDAO(connection);
+            matriculaDAO.atualizar(pre);
+        }
+
         System.out.println("Pré-matrícula convertida com sucesso!");
         System.out.println("Aluno " + pre.getAluno().getNome() + " agora está na turma " + turma.getNome());
+
     }
 
 }
