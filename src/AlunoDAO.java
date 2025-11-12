@@ -75,6 +75,8 @@ public class AlunoDAO {
                         responsavel,
                         rs.getString("necessidade_especial")
                 );
+                // Carregar irmãos
+                //carregarIrmaos(aluno, connection);
 
                 return aluno;
             }
@@ -114,6 +116,9 @@ public class AlunoDAO {
                         responsavel,
                         rs.getString("necessidade_especial")
                 );
+                // CARREGAR IRMAOS CADA ALUNO
+                //carregarIrmaos(aluno, connection);
+
                 alunos.add(aluno);
             }
         } catch (SQLException e){
@@ -152,6 +157,18 @@ public class AlunoDAO {
 
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao excluir aluno: " + e.getMessage(), e);
+        }
+    }
+    // No AlunoDAO, adicione este método para carregar irmãos
+    public void carregarIrmaos(Aluno aluno, Connection connection) {
+        IrmaosDAO irmaosDAO = new IrmaosDAO(connection);
+        List<Integer> idsIrmaos = irmaosDAO.buscarIrmaosPorId(aluno.getId());
+
+        for (int idIrmao : idsIrmaos) {
+            Aluno irmao = buscarPorId(idIrmao);
+            if (irmao != null && !aluno.getIrmaos().contains(irmao)) {
+                aluno.getIrmaos().add(irmao);
+            }
         }
     }
 }

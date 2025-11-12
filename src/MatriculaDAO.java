@@ -108,7 +108,44 @@ public class MatriculaDAO {
              ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                Matricula matricula = mapearMatricula(rs);
+                Matricula matricula = new Matricula();
+
+                // --- Dados básicos ---
+                matricula.setNumeroMatricula(rs.getInt("id_matricula"));
+                matricula.setPreMatricula(rs.getBoolean("pre_matricula"));
+                matricula.setObservacoes(rs.getString("observacoes"));
+                matricula.setEndereco(rs.getString("endereco"));
+                matricula.setData(rs.getDate("data_matricula").toLocalDate());
+
+                // --- Aluno ---
+                AlunoDAO alunoDAO = new AlunoDAO(connection);
+                Aluno aluno = alunoDAO.buscarPorId(rs.getInt("id_aluno"));
+                matricula.setAluno(aluno);
+
+                // --- Se for matrícula definitiva, busca funcionário e turma ---
+                if (!matricula.isPreMatricula()) {
+                    int idFuncionario = rs.getInt("id_funcionario");
+                    int idTurma = rs.getInt("id_turma");
+
+                    FuncionarioDAO funcionarioDAO = new FuncionarioDAO(connection);
+                    TurmaDAO turmaDAO = new TurmaDAO(connection);
+
+                    Funcionario funcionario = funcionarioDAO.buscarPorId(idFuncionario);
+                    Turma turma = turmaDAO.buscarPorId(idTurma);
+
+                    // Ajusta o professor da turma, se existir
+                    if (turma != null && turma.getProfessor() == null && funcionario instanceof Professor) {
+                        turma.setProfessor((Professor) funcionario);
+                    }
+
+                    matricula.setFuncionario(funcionario);
+                    matricula.setTurma(turma);
+                }
+
+                // --- Responsáveis ---
+                List<Responsavel> responsaveis = buscarResponsaveisPorMatricula(matricula.getNumeroMatricula());
+                matricula.setResponsaveis(responsaveis);
+
                 matriculas.add(matricula);
             }
 
@@ -121,17 +158,21 @@ public class MatriculaDAO {
 
     // Mapeia cada linha do ResultSet para um objeto Matricula
     private Matricula mapearMatricula(ResultSet rs) throws SQLException {
+
+        // Busca aluno vinculado
         Matricula matricula = new Matricula();
+        AlunoDAO alunoDAO = new AlunoDAO(connection);
+        Aluno aluno = alunoDAO.buscarPorId(rs.getInt("id_aluno"));
+        matricula.setAluno(aluno);
+
         matricula.setNumeroMatricula(rs.getInt("id_matricula"));
         matricula.setPreMatricula(rs.getBoolean("pre_matricula"));
         matricula.setObservacoes(rs.getString("observacoes"));
         matricula.setEndereco(rs.getString("endereco"));
         matricula.setData(rs.getDate("data_matricula").toLocalDate());
 
-        // Busca aluno vinculado
-        AlunoDAO alunoDAO = new AlunoDAO(connection);
-        Aluno aluno = alunoDAO.buscarPorId(rs.getInt("id_aluno"));
-        matricula.setAluno(aluno);
+
+
 
         // Se não for pré-matrícula, busca também funcionário e turma
         if (!matricula.isPreMatricula()) {
@@ -188,5 +229,47 @@ public class MatriculaDAO {
             throw new RuntimeException("Erro ao atualizar matrícula: " + e.getMessage(), e);
         }
     }
+    // READ - Listar pré-matrículas (somente as que têm pre_matricula = 1)
+    public List<Matricula> listarPreMatriculas() {
+        List<Matricula> preMatriculas = new ArrayList<>();
+
+        String sql = """
+        SELECT m.id_matricula, m.numero_matricula, m.id_aluno, m.pre_matricula,
+               m.situacao, m.id_funcionario, m.id_turma,
+               a.nome AS nome_aluno
+        FROM Matricula m
+        JOIN Aluno a ON m.id_aluno = a.id_aluno
+        WHERE m.pre_matricula = true
+    """;
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                Matricula matricula = new Matricula();
+                matricula.setNumeroMatricula(rs.getInt("numero_matricula"));
+                matricula.setPreMatricula(rs.getBoolean("pre_matricula"));
+                matricula.setSituacao(SituacaoMatricula.valueOf(rs.getString("situacao")));
+
+                // Criar o objeto Aluno dentro da matrícula
+                AlunoDAO alunoDAO = new AlunoDAO(connection);
+                Aluno aluno = alunoDAO.buscarPorId(rs.getInt("id_aluno"));
+                aluno.setId(rs.getInt("id_aluno"));
+                aluno.setNome(rs.getString("nome_aluno"));
+                matricula.setAluno(aluno);
+
+                // (Opcional) se quiser carregar também o funcionário e turma
+                matricula.setFuncionario(null);
+                matricula.setTurma(null);
+
+                preMatriculas.add(matricula);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao listar pré-matrículas: " + e.getMessage(), e);
+        }
+
+        return preMatriculas;
+    }
+
+
 }
 

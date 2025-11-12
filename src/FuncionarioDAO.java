@@ -172,6 +172,7 @@ public class FuncionarioDAO {
                         rs.getString("cargo"),
                         rs.getString("vinculo")
                 ) { };
+
         }
     }
 

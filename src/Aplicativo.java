@@ -1,4 +1,5 @@
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.*;
@@ -413,6 +414,12 @@ class Matricula {
     }
 
     public void setResponsaveis(List<Responsavel> responsaveis) {
+    }
+
+    public void setIdMatricula(int idMatricula) {
+    }
+
+    public void setDataMatricula(Date dataMatricula) {
     }
 }
 
@@ -936,35 +943,88 @@ public class Aplicativo {
 
     private static void adicionarIrmaos(){
         System.out.println("\n--- Associação de Irmãos ---");
-        if(alunos.size() < 2){
-            System.out.println("É necessário ter pelo menos dois alunos cadastrados!");
+
+        //conectar alunos do banco
+        try(Connection conn = connectionFactory.recuperarConexao()){
+            AlunoDAO alunoDAO = new AlunoDAO(conn);
+            alunos = alunoDAO.listarTodos();
+
+            if(alunos.size() < 2){
+                System.out.println("É necessário ter pelo menos dois alunos cadastrados!");
+            }
+            System.out.println("Lista de alunos:");
+            for (int i = 0; i < alunos.size(); i++) {
+                System.out.println((i + 1) + ". " + alunos.get(i).getNome() + "(ID: "+ alunos.get(i).getId() + ")");
+            }
+
+            System.out.println("Selecione o número do primeiro aluno: ");
+            int index1 = Integer.parseInt(scanner.nextLine()) -1;
+
+            System.out.println("Selecione o número do segundo aluno (irmão): ");
+            int index2 = Integer.parseInt(scanner.nextLine()) -1;
+
+            if (index1 < 0 || index1 >= alunos.size() || index2 < 0 || index2 >= alunos.size()) {
+                System.out.println("Índice inválido!");
+                return;
+            }
+            Aluno a1 = alunos.get(index1);
+            Aluno a2 = alunos.get(index2);
+
+            if (a1.equals(a2)) {
+                System.out.println("Um aluno não pode ser irmão de si mesmo!");
+                return;
+            }
+
+            // Salvar associacao de irmaos no banco de dados
+            try (Connection connIrmaos = connectionFactory.recuperarConexao()){
+                IrmaosDAO irmaosDAO = new IrmaosDAO(connIrmaos);
+
+                //Verificar se ja são irmãos
+                if(!irmaosDAO.saoIrmaos(a1.getId(), a2.getId())){
+                    irmaosDAO.adicionarIrmaos(a1.getId(), a2.getId());
+
+                    //Atualizar também na memória
+                    a1.adicionarIrmao(a2);
+
+                    System.out.println("Irmãos vinculados com sucesso: " + a1.getNome() + " <-> " + a2.getNome());
+                }else{
+                    System.out.println("Estes alunos já são irmãos!");
+                }
+            }catch (Exception e){
+                System.out.println("Erro ao associar irmãos: " + e.getMessage());
+            }
+
+
+        }catch (SQLException e){
+            throw new RuntimeException(e);
         }
 
-        System.out.println("Lista de alunos:");
-        for (int i = 0; i < alunos.size(); i++){
-            System.out.println((i + 1)+ ". " + alunos.get(i).getNome());
-        }
-        System.out.println("Selecione o número do primeiro aluno: ");
-        int index1 = Integer.parseInt(scanner.nextLine()) - 1;
 
-        System.out.println("Selecione o número do segundo aluno (irmão):  ");
-        int index2 = Integer.parseInt(scanner.nextLine()) - 1;
+//ANTES DA CONEXAO COM O BANCO DE DADOS!
+        //for (int i = 0; i < alunos.size(); i++){
+        //    System.out.println((i + 1)+ ". " + alunos.get(i).getNome());
+       // }
+        //System.out.println("Selecione o número do primeiro aluno: ");
+        //int index1 = Integer.parseInt(scanner.nextLine()) - 1;
 
-        if(index1 < 0 || index1 >= alunos.size() || index2 < 0 || index2 >= alunos.size()){
-            System.out.println("Índice inválido!");
-            return;
-        }
+        //System.out.println("Selecione o número do segundo aluno (irmão):  ");
+       // int index2 = Integer.parseInt(scanner.nextLine()) - 1;
 
-        Aluno a1 = alunos.get(index1);
-        Aluno a2 = alunos.get(index2);
+       // if(index1 < 0 || index1 >= alunos.size() || index2 < 0 || index2 >= alunos.size()){
+       //     System.out.println("Índice inválido!");
+       //     return;
+       // }
 
-        if(a1.equals(a2)){
-            System.out.println("Um aluno não pode ser irmão de si mesmo! ");
-            return;
-        }
+       // Aluno a1 = alunos.get(index1);
+       // Aluno a2 = alunos.get(index2);
 
-        a1.adicionarIrmao(a2);
-        System.out.println("Irmãos vinculados com sucesso: "+ a1.getNome() + "<->" + a2.getNome());
+        //if(a1.equals(a2)){
+       //     System.out.println("Um aluno não pode ser irmão de si mesmo! ");
+        //    return;
+       // }
+
+        //a1.adicionarIrmao(a2);
+       // System.out.println("Irmãos vinculados com sucesso: "+ a1.getNome() + "<->" + a2.getNome());
     }
 
     private static void cadastrarPreMatricula(){
@@ -979,18 +1039,24 @@ public class Aplicativo {
             AlunoDAO alunoDAO = new AlunoDAO(connection);
             alunos = alunoDAO.listarTodos();
 
-            for (Aluno al : alunos){
-                System.out.println(al.getId() +". " + al.getNome());
-            }
-            System.out.println("Selecione o número do aluno: ");
-            int alunoIndex = Integer.parseInt(scanner.nextLine());
-            alunoDAO.buscarPorId(alunoIndex);
+            for (int i = 0; i < alunos.size(); i++) {
+                System.out.println((i+1) +". " + alunos.get(i).getNome());
 
-            if (alunoIndex < 0 ){
+            }
+
+
+            System.out.println("Selecione o número do aluno: ");
+            int alunoIndex = Integer.parseInt(scanner.nextLine())-1;
+
+
+
+            if (alunoIndex < 0 || alunoIndex >= alunos.size() ){
                 System.out.println("Índice inválido!");
                 return;
+            }else {
+                Aluno aluno1 = alunos.get(alunoIndex);
+                aluno = alunoDAO.buscarPorId(aluno1.getId());
             }
-            aluno = alunoDAO.buscarPorId(alunoIndex);
 
         } catch (RuntimeException e) {
             throw new RuntimeException(e);
@@ -1004,17 +1070,22 @@ public class Aplicativo {
             Connection connection = new ConnectionFactory().recuperarConexao();
             ResponsavelDAO responsavelDAO = new ResponsavelDAO(connection);
             responsaveis = responsavelDAO.listarTodos();
-            for (Responsavel r : responsaveis){
-                System.out.println(r.getId()+". " + r.getNome());
+            for (int i = 0; i < responsaveis.size(); i++) {
+                System.out.println((i+1) + ". " + responsaveis.get(i));
             }
+           // for (Responsavel r : responsaveis){
+            //    System.out.println(r.getId()+". " + r.getNome());
+           // }
 
             String[] respIndices = scanner.nextLine().split(",");
             respSelecionados = new ArrayList<>();
 
             for (String indexStr : respIndices){
-                int idx = Integer.parseInt(indexStr.trim()) ;
+
+                int idx = Integer.parseInt(indexStr.trim());
                 if(idx >= 0){
-                    respSelecionados.add(responsavelDAO.buscarPorId(idx));
+
+                    respSelecionados.add(responsavelDAO.buscarPorId(responsaveis.get(idx).getId()));
                 }
             }
 
@@ -1039,7 +1110,8 @@ public class Aplicativo {
             Connection connection = new ConnectionFactory().recuperarConexao();
             MatriculaDAO matriculaDAO = new MatriculaDAO(connection);
             matriculaDAO.cadastrar(preMatricula);
-            System.out.println("Pré-matrícula registrada com sucesso! Número: " + preMatricula.getNumeroMatricula());
+
+            System.out.println("Pré-matrícula registrada com sucesso! ");
         } catch (RuntimeException e) {
             throw new RuntimeException(e);
         }
@@ -1063,12 +1135,13 @@ public class Aplicativo {
                 } else {
                     System.out.println("\n--- Lista de Responsáveis ---");
                     for (Responsavel r : responsaveis) {
-                        System.out.println("ID: " + r.getId() +
-                                " | Nome: " + r.getNome() +
-                                " | Idade: " + r.getIdade() +
-                                " | CPF: " + r.getCpf() +
-                                " | Telefone: " + r.getTelefone() +
-                                " | Parentesco: " + r.getParentesco());
+                        System.out.println(r);
+                       // System.out.println("ID: " + r.getId() +
+                        //        " | Nome: " + r.getNome() +
+                        //        " | Idade: " + r.getIdade() +
+                         //       " | CPF: " + r.getCpf() +
+                         //       " | Telefone: " + r.getTelefone() +
+                         //       " | Parentesco: " + r.getParentesco());
                     }
                 }
             }
@@ -1082,12 +1155,13 @@ public class Aplicativo {
                 } else {
                     System.out.println("\n--- Lista de Alunos ---");
                     for (Aluno a : alunos) {
-                        System.out.println("ID: " + a.getId() +
-                                " | Nome: " + a.getNome() +
-                                " | Idade: " + a.getIdade() +
-                                " | CPF: " + a.getCpf()+
-                                " | Necessidade Especial: " + a.getNecessidadeEspecial() +
-                                " | ID_Responsável: " + a.getResponsavel().getId());
+                        System.out.println(a);
+                        //System.out.println("ID: " + a.getId() +
+                         //       " | Nome: " + a.getNome() +
+                         //       " | Idade: " + a.getIdade() +
+                          //      " | CPF: " + a.getCpf()+
+                          //      " | Necessidade Especial: " + a.getNecessidadeEspecial() +
+                           //     " | ID_Responsável: " + a.getResponsavel().getId());
                     }
                 }
             }
@@ -1097,16 +1171,18 @@ public class Aplicativo {
                 funcionarios = funcionarioDAO.listarTodos();
 
                 if (funcionarios.isEmpty()) {
-                    System.out.println("Nenhum aluno encontrado.");
+                    System.out.println("Nenhum funcionário encontrado.");
                 } else {
-                    System.out.println("\n--- Lista de Alunos ---");
+                    System.out.println("\n--- Lista de Funcionários ---");
                     for (Funcionario f : funcionarios) {
-                        System.out.println("ID: " + f.getId() +
-                                " | Nome: " + f.getNome() +
-                                " | Idade: " + f.getIdade() +
-                                " | CPF: " + f.getCpf()+
-                                " | Cargo: " + f.getCargo() +
-                                " | Vinculo: " + f.getVinculo());
+                        System.out.println(f);
+                        //System.out.println("ID: " + f.getId() +
+                        //        " | Nome: " + f.getNome() +
+                        //        " | Idade: " + f.getIdade() +
+                         //       " | CPF: " + f.getCpf()+
+                          //      " | Cargo: " + f.getCargo() +
+                           //     " | Vinculo: " + f.getVinculo());
+
                     }
                 }
             }
@@ -1134,7 +1210,9 @@ public class Aplicativo {
     }
 
     private static void exibirMatriculas() {
-        System.out.println("\n--- Lista de Matrículas ---");
+        System.out.println("\n=== Lista de Matrículas ===");
+
+
         if (matriculas.isEmpty()) {
             System.out.println("Nenhuma matrícula cadastrada.");
         } else {
@@ -1147,23 +1225,59 @@ public class Aplicativo {
     private static void exibirIrmaos() {
         System.out.println("\n=== Relação de Irmãos ===");
 
-        boolean encontrou = false;
-        for (Aluno aluno : alunos){
-            if(!aluno.getIrmaos().isEmpty()){
-                encontrou = true;
-                System.out.println("\n Aluno: " + aluno.getNome());
-                System.out.println("   ↳ Irmãos: " +
-                        aluno.getIrmaos().stream()
-                                .map(Aluno::getNome).reduce((a,b) -> a + ", " + b)
-                                .orElse(""));
+        try(Connection connection = connectionFactory.recuperarConexao()) {
+            AlunoDAO alunoDAO = new AlunoDAO(connection);
+            IrmaosDAO irmaosDAO = new IrmaosDAO(connection);
+
+            alunos = alunoDAO.listarTodos();
+
+            boolean encontrou = false;
+
+            for(Aluno aluno : alunos){
+                //Buscar irmaos do banco
+                List<Integer> idsIrmaos = irmaosDAO.buscarIrmaosPorId(aluno.getId());
+                if (!idsIrmaos.isEmpty()){
+                    encontrou = true;
+                    System.out.println("\nAluno: "+ aluno.getNome() + " (ID: " + aluno.getId() + ")");
+
+                    System.out.println("  ↳ Irmãos: ");
+
+                    //Buscar nomes dos irmãos
+                    List<String> nomesIrmaos = new ArrayList<>();
+                    for (int idIrmao : idsIrmaos){
+                        Aluno irmao = alunoDAO.buscarPorId(idIrmao);
+                        if (irmao != null) {
+                            nomesIrmaos.add(irmao.getNome()+" ID: "+ irmao.getId()+ "");
+                        }
+                    }
+
+                    System.out.println(String.join(", ", nomesIrmaos));
+                }
             }
+            if (!encontrou){
+                System.out.println("Nenhum vínculo de irmãos encontrado.");
+            }
+        } catch (Exception e) {
+            System.out.println("Erro ao exibir irmãos: "+ e.getMessage());
         }
 
-        if(!encontrou){
-            System.out.println("Nenhum vínculo de irmãos encontrado.");
-        }
+        //boolean encontrou = false;
+        //for (Aluno aluno : alunos){
+          //  if(!aluno.getIrmaos().isEmpty()){
+         //       encontrou = true;
+          //      System.out.println("\n Aluno: " + aluno.getNome());
+          //      System.out.println("   ↳ Irmãos: " +
+          //              aluno.getIrmaos().stream()
+           //                     .map(Aluno::getNome).reduce((a,b) -> a + ", " + b)
+           //                     .orElse(""));
+          //  }
+    //    }
 
-        System.out.println();
+       // if(!encontrou){
+       //     System.out.println("Nenhum vínculo de irmãos encontrado.");
+       // }
+
+      //  System.out.println();
 
     }
 
@@ -1226,103 +1340,104 @@ public class Aplicativo {
 
 
     private static void converterMatricula() throws SQLException {
-        System.out.println("\n --- Converter PRÉ-MATRÍCULA em matrícula deinitiva ---");
-        Matricula pre;
-        Funcionario func;
-        Turma turma;
-        //Filtro de Pre-matriculas pendentes...
-        List<Matricula> pendentes = new ArrayList<>();
-        try{
-            Connection connection = new ConnectionFactory().recuperarConexao();
-            MatriculaDAO matriculaDAO = new MatriculaDAO(connection);
-            matriculas = matriculaDAO.listarTodos();
-            for (Matricula m : matriculas){
-                if (m.isPreMatricula() && m.getSituacao() == SituacaoMatricula.PENDENTE){
-                    pendentes.add(m);
+            System.out.println("\n --- Converter PRÉ-MATRÍCULA em matrícula deinitiva ---");
+            Matricula pre;
+            Funcionario func;
+            Turma turma;
+            //Filtro de Pre-matriculas pendentes...
+            List<Matricula> pendentes = new ArrayList<>();
+            try{
+                Connection connection = new ConnectionFactory().recuperarConexao();
+                MatriculaDAO matriculaDAO = new MatriculaDAO(connection);
+                matriculas = matriculaDAO.listarPreMatriculas();
+                for (Matricula matPendente : matriculas) {
+                    Aluno aluno = matPendente.getAluno();
+                    String nomeAluno = (aluno != null) ? aluno.getNome() : "[Aluno não encontrado]";
+                    System.out.println(matPendente.getNumeroMatricula() + ". " + nomeAluno);
                 }
+
+
+                if (matriculas.isEmpty()){
+                    System.out.println("Nenhuma pré-matrícula pendente encontrada.");
+                    return;
+                }
+
+                //Exiba as pre matriculas disponiveis :)
+                System.out.println("Pré-matrículas disponíveis: ");
+                for (Matricula matPendente : pendentes) {
+                    System.out.println(matPendente.getNumeroMatricula() + ". " + matPendente.getAluno().getNome());
+                }
+
+                System.out.println("Selecione o número da pré-matrícula: ");
+                int index = Integer.parseInt(scanner.nextLine());
+
+                if (index < 0 ){
+                    System.out.println("Índice inválido!");
+                    return;
+                }
+                pre = matriculaDAO.buscarPorId(index);
+
+            } catch (RuntimeException e) {
+                throw new RuntimeException(e);
             }
 
-            if (pendentes.isEmpty()){
-                System.out.println("Nenhuma pré-matrícula pendente encontrada.");
-                return;
+
+            //selecionar funcionario responsaveel
+            try{
+                Connection connection = new ConnectionFactory().recuperarConexao();
+                FuncionarioDAO funcionarioDAO = new FuncionarioDAO(connection);
+                List<Funcionario> cuidadores = funcionarioDAO.listarPorCargo("Cuidador");
+
+                System.out.println("Funcionários disponíveis: ");
+                for (Funcionario cuid : cuidadores){
+                    System.out.println(cuid.getId()+ ". "+ cuid.getNome());
+                }
+                System.out.println("Selecionar o número do funcionário: ");
+                int funcIndex = Integer.parseInt(scanner.nextLine());
+                if (funcIndex < 0){
+                    System.out.println("Índice inválido!");
+                }
+                func = funcionarioDAO.buscarPorId(funcIndex);
+
+            } catch (RuntimeException e) {
+                throw new RuntimeException(e);
             }
 
-            //Exiba as pre matriculas disponiveis :)
-            System.out.println("Pré-matrículas disponíveis: ");
-            for (Matricula matPendente : pendentes) {
-                System.out.println(matPendente.getNumeroMatricula() + ". " + matPendente.getAluno().getNome());
+
+            try{
+                Connection connection = new ConnectionFactory().recuperarConexao();
+                TurmaDAO turmaDAO = new TurmaDAO(connection);
+                turmas = turmaDAO.listarTodos();
+                for (Turma tur : turmas){
+                    System.out.println(tur.getId()+". "+ tur.getNome());
+                }
+                System.out.print("Selecione o número da turma: ");
+                int turmaIndex = Integer.parseInt(scanner.nextLine());
+                if (turmaIndex < 0) {
+                    System.out.println("Índice inválido!");
+                    return;
+                }
+                turma = turmaDAO.buscarPorId(turmaIndex);
+            } catch (RuntimeException e) {
+                throw new RuntimeException(e);
             }
-
-            System.out.println("Selecione o número da pré-matrícula: ");
-            int index = Integer.parseInt(scanner.nextLine());
-
-            if (index < 0 ){
-                System.out.println("Índice inválido!");
-                return;
-            }
-            pre = matriculaDAO.buscarPorId(index);
-
-        } catch (RuntimeException e) {
-            throw new RuntimeException(e);
-        }
-
-
-        //selecionar funcionario responsaveel
-        try{
-            Connection connection = new ConnectionFactory().recuperarConexao();
-            FuncionarioDAO funcionarioDAO = new FuncionarioDAO(connection);
-            List<Funcionario> cuidadores = funcionarioDAO.listarPorCargo("Cuidador");
-
-            System.out.println("Funcionários disponíveis: ");
-            for (Funcionario cuid : cuidadores){
-                System.out.println(cuid.getId()+ ". "+ cuid.getNome());
-            }
-            System.out.println("Selecionar o número do funcionário: ");
-            int funcIndex = Integer.parseInt(scanner.nextLine());
-            if (funcIndex < 0){
-                System.out.println("Índice inválido!");
-            }
-            func = funcionarioDAO.buscarPorId(funcIndex);
-
-        } catch (RuntimeException e) {
-            throw new RuntimeException(e);
-        }
-
-
-       try{
-           Connection connection = new ConnectionFactory().recuperarConexao();
-           TurmaDAO turmaDAO = new TurmaDAO(connection);
-           turmas = turmaDAO.listarTodos();
-           for (Turma tur : turmas){
-               System.out.println(tur.getId()+". "+ tur.getNome());
-           }
-           System.out.print("Selecione o número da turma: ");
-           int turmaIndex = Integer.parseInt(scanner.nextLine());
-           if (turmaIndex < 0) {
-               System.out.println("Índice inválido!");
-               return;
-           }
-           turma = turmaDAO.buscarPorId(turmaIndex);
-       } catch (RuntimeException e) {
-           throw new RuntimeException(e);
-       }
-        // Selelecionar Turma
+            // Selelecionar Turma
 
 
 
-        //Atualizacao (de fato)
+            //Atualizacao (de fato)
 
-        pre.setPreMatricula(false);
-        pre.setSituacao(SituacaoMatricula.ATIVA);
-        pre.setFuncionario(func);
-        pre.setTurma(turma);
-        turma.adicionarAluno(pre.getAluno());
+            pre.setPreMatricula(false);
+            pre.setSituacao(SituacaoMatricula.ATIVA);
+            pre.setFuncionario(func);
+            pre.setTurma(turma);
+            turma.adicionarAluno(pre.getAluno());
 
 // Atualiza no banco
-        try (Connection connection = new ConnectionFactory().recuperarConexao()) {
-            MatriculaDAO matriculaDAO = new MatriculaDAO(connection);
-            matriculaDAO.atualizar(pre);
-        }
+            try (Connection connection = new ConnectionFactory().recuperarConexao()) {
+                MatriculaDAO matriculaDAO = new MatriculaDAO(connection);
+                matriculaDAO.atualizar(pre);
+            }
 
         System.out.println("Pré-matrícula convertida com sucesso!");
         System.out.println("Aluno " + pre.getAluno().getNome() + " agora está na turma " + turma.getNome());

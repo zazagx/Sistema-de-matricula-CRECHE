@@ -1,4 +1,6 @@
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TurmaDAO {
     private Connection connection;
@@ -60,4 +62,93 @@ public class TurmaDAO {
 
         return stmt;
     }
+    // READ - Buscar turma por ID
+    public Turma buscarPorId(int idTurma) {
+        String sql = "SELECT * FROM Turma WHERE id_turma = ?";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, idTurma);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapearTurma(rs);
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao buscar turma por ID: " + e.getMessage(), e);
+        }
+        return null;
+    }
+
+    // READ - Listar todas as turmas
+    public List<Turma> listarTodos() {
+        List<Turma> turmas = new ArrayList<>();
+        String sql = "SELECT * FROM Turma ORDER BY id_turma";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                Turma turma = mapearTurma(rs);
+                turmas.add(turma);
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao listar turmas: " + e.getMessage(), e);
+        }
+        return turmas;
+    }
+    // Método auxiliar para reconstruir o objeto Turma completo
+    private Turma mapearTurma(ResultSet rs) throws SQLException {
+        String tipo = rs.getString("tipo_turma");
+        int idProfessor = rs.getInt("id_professor");
+
+        // Busca o professor antes de instanciar a turma
+        FuncionarioDAO funcionarioDAO = new FuncionarioDAO(connection);
+        Professor professor = (Professor) funcionarioDAO.buscarPorId(idProfessor);
+
+        Turma turma;
+
+        switch (tipo) {
+            case "Creche":
+                turma = new TurmaCreche(
+                        rs.getInt("id_turma"),
+                        rs.getString("nome"),
+                        rs.getString("faixa_etaria"),
+                        rs.getString("turno"),
+                        rs.getString("hora_cochilo"),
+                        professor
+                );
+                break;
+
+            case "Infantil":
+                turma = new TurmaInfantil(
+                        rs.getInt("id_turma"),
+                        rs.getString("nome"),
+                        rs.getString("faixa_etaria"),
+                        rs.getString("turno"),
+                        rs.getString("aulas_psicomotricidade"),
+                        professor
+                );
+                break;
+
+            case "Pre":
+                turma = new TurmaPre(
+                        rs.getInt("id_turma"),
+                        rs.getString("nome"),
+                        rs.getString("faixa_etaria"),
+                        rs.getString("turno"),
+                        rs.getString("aulas_alfabetizacao"),
+                        professor
+                );
+                break;
+
+            default:
+                throw new SQLException("Tipo de turma desconhecido: " + tipo);
+        }
+
+        return turma;
+    }
+        // Buscar o professor vinculado
+
 }
