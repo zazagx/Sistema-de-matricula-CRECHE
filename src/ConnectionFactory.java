@@ -1,18 +1,28 @@
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Properties;
 
 public class ConnectionFactory {
-    private static final String URL = "jdbc:mysql://localhost:3306/Creche";
-    private static final String USER = "root";
-    private static final String PASSWORD = "isaac1662006";
 
     public Connection recuperarConexao() {
         try {
-            return DriverManager.getConnection(URL, USER,PASSWORD);
+            Properties props = new Properties();
+            props.load(new FileInputStream("config.properties"));
+            String url = props.getProperty("db.url");
+            String user = props.getProperty("db.user");
+            String password = props.getProperty("db.password");
+            return DriverManager.getConnection(url, user,password);
 
         } catch (SQLException e) {
            throw new RuntimeException("Erro ao conectar com o bando de dados", e);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }
